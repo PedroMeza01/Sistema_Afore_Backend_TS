@@ -3,10 +3,56 @@ import { ICreateProcesoDTO, IUpdateProcesoDTO } from '../interface/Proceso.inter
 import Proceso from '../model/Proceso';
 import ProcesoArchivo from '../model/ProcesoArchivo';
 
+type FindArchivoByIdInput = {
+  id_proceso_archivo: string;
+  id_organizacion?: string;
+};
+
+type UpdateArchivoInput = {
+  id_proceso_archivo: string;
+  id_organizacion?: string;
+
+  categoria: string | null;
+
+  nombre_original: string;
+  mime_type: string;
+  tamano_bytes: number;
+
+  storage_provider: string; // 'LOCAL' | 'SUPABASE' | ...
+  storage_bucket: string | null;
+  storage_path: string;
+  public_url: string | null;
+
+  activo: boolean;
+};
+
+type CreateArchivoInput = {
+  id_proceso: string;
+  id_organizacion: string;
+
+  categoria: string | null;
+
+  nombre_original: string;
+  mime_type: string;
+  tamano_bytes: number;
+
+  storage_provider: string;
+  storage_bucket: string | null;
+  storage_path: string;
+  public_url: string | null;
+
+  activo: boolean;
+};
 export const ProcesoRepository = {
-  create: async (data: ICreateProcesoDTO) => {
-    console.log('PROCESORESPOSITORY', data);
-    return await Proceso.create({ ...data });
+  findArchivoById: async (input: FindArchivoByIdInput) => {
+    const where: any = { id_proceso_archivo: input.id_proceso_archivo };
+    if (input.id_organizacion) where.id_organizacion = input.id_organizacion;
+
+    return await ProcesoArchivo.findOne({ where });
+  },
+  create: async (data: ICreateProcesoDTO, id_organizacion: string) => {
+    // console.log('PROCESORESPOSITORY', data);
+    return await Proceso.create({ ...data, id_organizacion });
   },
 
   findById: async (id_proceso: string) => {
@@ -48,5 +94,31 @@ export const ProcesoRepository = {
       where: { id_proceso, activo: true },
       order: [['createdAt', 'DESC']]
     });
+  },
+  updateArchivo: async (input: UpdateArchivoInput) => {
+    const where: any = { id_proceso_archivo: input.id_proceso_archivo };
+    if (input.id_organizacion) where.id_organizacion = input.id_organizacion;
+
+    const [affected, rows] = await ProcesoArchivo.update(
+      {
+        categoria: input.categoria,
+
+        nombre_original: input.nombre_original,
+        mime_type: input.mime_type,
+        tamano_bytes: input.tamano_bytes,
+
+        storage_provider: input.storage_provider,
+        storage_bucket: input.storage_bucket,
+        storage_path: input.storage_path,
+        public_url: input.public_url,
+
+        activo: input.activo
+      },
+      { where, returning: true }
+    );
+
+    if (affected === 0) return null;
+    // returning:true => rows[0] es el registro actualizado
+    return rows?.[0] ?? null;
   }
 };

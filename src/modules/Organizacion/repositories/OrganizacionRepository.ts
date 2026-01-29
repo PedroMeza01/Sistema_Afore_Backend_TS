@@ -1,7 +1,7 @@
 import { Op, Transaction } from 'sequelize';
 import { ICrearOrganizacionDTO } from '../interface/Organizacion.interface';
-import Organizacion from '../model/Organizacion';
 import { v4 as uuidv4 } from 'uuid';
+import Organizacion from '../model/Organizacion';
 // AJUSTA el import a tu ruta real del model
 
 export const OrganizacionRepository = {

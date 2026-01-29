@@ -1,5 +1,6 @@
 import { v4 as uuidv4 } from 'uuid';
 import { ICreateUsuario } from '../interface/Auth.interface';
+
 import Usuario from '../model/Usuarios';
 import Organizacion from '../../Organizacion/model/Organizacion';
 

@@ -1,12 +1,43 @@
 // src/modules/Proceso/controllers/ProcesoController.ts
 import { Request, Response } from 'express';
 import { ProcesoService } from '../services/Proceso.service';
+import { AuthedRequest } from '../../../middleware/auth';
 
+const getOrg = (req: AuthedRequest) => {
+  // Ideal: req.user?.id_organizacion
+  const orgFromToken = (req.user as any)?.id_organizacion;
+
+  return orgFromToken ?? req.body?.id_organizacion;
+};
 export class ProcesoController {
-  static create = async (req: Request, res: Response) => {
+  static replaceArchivo = async (req: AuthedRequest, res: Response) => {
+    const { id_proceso_archivo } = req.params;
+    const file = req.file;
+
+    // opcional: si recibes categoria
+    const { categoria } = req.body;
+
+    if (!id_proceso_archivo) res.status(400).json({ ok: false, message: 'Falta id_proceso_archivo' });
+    if (!file) res.status(400).json({ ok: false, message: 'Falta file' });
+
+    try {
+      const updated = await ProcesoService.replaceArchivo({
+        id_proceso_archivo,
+        categoria: categoria ?? null,
+        file
+      });
+
+      res.status(200).json({ ok: true, mensaje: updated });
+    } catch (err: any) {
+      console.log(err);
+      res.status(400).json({ ok: false, message: err?.message || 'Error al reemplazar archivo' });
+    }
+  };
+  static create = async (req: AuthedRequest, res: Response) => {
     try {
       //  console.log(req.body);
-      const row = await ProcesoService.create(req.body);
+      const id_origanizacion = getOrg(req);
+      const row = await ProcesoService.create(req.body, id_origanizacion);
       res.status(201).json({ mensaje: row });
     } catch (e: any) {
       res.status(400).json({ message: e?.message || 'Error creando proceso' });

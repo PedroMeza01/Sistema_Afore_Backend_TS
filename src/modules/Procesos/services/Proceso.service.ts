@@ -1,5 +1,12 @@
 import { ICreateProcesoDTO, IUpdateProcesoDTO, IUploadProcesoArchivoDTO } from '../interface/Proceso.interface';
 import { ProcesoRepository } from '../repositories/ProcesoRepository';
+import fs from 'fs/promises';
+async function safeUnlink(p?: string | null) {
+  if (!p) return;
+  try {
+    await fs.unlink(p);
+  } catch {}
+}
 
 export const ProcesoService = {
   calcBono(data: { tipo_firma?: string; encuesta_aplicada?: boolean }) {
@@ -8,7 +15,48 @@ export const ProcesoService = {
     return (base + extra).toFixed(2);
   },
 
-  create: async (data: ICreateProcesoDTO) => {
+  replaceArchivo: async (input: {
+    id_proceso_archivo: string;
+    id_organizacion?: string; // opcional si filtras por org
+    categoria: string | null;
+    file: { originalname: string; mimetype: string; size: number; path: string };
+  }) => {
+    const { id_proceso_archivo, id_organizacion, categoria, file } = input;
+
+    const current = await ProcesoRepository.findArchivoById({
+      id_proceso_archivo
+    });
+    if (!current) throw new Error('Archivo no encontrado');
+
+    const newPath = file.path;
+
+    const updated = await ProcesoRepository.updateArchivo({
+      id_proceso_archivo,
+      id_organizacion,
+
+      categoria: categoria ?? current.categoria,
+
+      nombre_original: file.originalname,
+      mime_type: file.mimetype,
+      tamano_bytes: file.size,
+
+      storage_provider: 'LOCAL',
+      storage_bucket: null,
+      storage_path: newPath,
+      public_url: null,
+
+      activo: true
+    });
+
+    // borrar archivo anterior si era local
+    if (current.storage_provider === 'LOCAL' && current.storage_path && current.storage_path !== newPath) {
+      await safeUnlink(current.storage_path);
+    }
+
+    return updated;
+  },
+
+  create: async (data: ICreateProcesoDTO, id_organizacion: string) => {
     // ✅ OJO: referenciar con el objeto
     const bono = ProcesoService.calcBono({ tipo_firma: data.tipo_firma, encuesta_aplicada: data.encuesta_aplicada });
 
@@ -17,7 +65,7 @@ export const ProcesoService = {
       bono_asesora: data.bono_asesora ?? bono
     };
 
-    return await ProcesoRepository.create(payload);
+    return await ProcesoRepository.create(payload, id_organizacion);
   },
 
   getById: async (id_proceso: string) => {

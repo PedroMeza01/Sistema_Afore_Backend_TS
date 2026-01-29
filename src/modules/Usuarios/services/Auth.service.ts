@@ -16,7 +16,7 @@ export const AuthService = {
     const usuario = await AuthRepository.usuarioPorUser(username);
     if (!usuario) throw new Error('Usuario no encontrado');
     const rol = usuario.rol_usuario;
-    //  console.log(usuario);
+    //console.log(usuario);
     const passwordCorrecta = await checkPassword(password, usuario.password_hash);
     if (!passwordCorrecta) throw new Error('Contraseña incorrecta.');
     //console.log('PASSWORDCORRECTA', passwordCorrecta);
