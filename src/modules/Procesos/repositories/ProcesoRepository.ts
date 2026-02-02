@@ -1,7 +1,12 @@
 // src/modules/Proceso/repository/ProcesoRepository.ts
+import { Transaction } from 'sequelize';
 import { ICreateProcesoDTO, IUpdateProcesoDTO } from '../interface/Proceso.interface';
 import Proceso from '../model/Proceso';
 import ProcesoArchivo from '../model/ProcesoArchivo';
+import Cliente from '../../Clientes/model/Clientes';
+import Organizacion from '../../Organizacion/model/Organizacion';
+import Afores from '../../Afores/model/Afores';
+import Asesor from '../../Asesores/model/Asesor';
 
 type FindArchivoByIdInput = {
   id_proceso_archivo: string;
@@ -43,15 +48,42 @@ type CreateArchivoInput = {
 
   activo: boolean;
 };
-export const ProcesoRepository = {
-  findArchivoById: async (input: FindArchivoByIdInput) => {
-    const where: any = { id_proceso_archivo: input.id_proceso_archivo };
-    if (input.id_organizacion) where.id_organizacion = input.id_organizacion;
 
-    return await ProcesoArchivo.findOne({ where });
-  },
+// ===== Cierre de Proceso (snapshot + borrado) =====
+
+type GetSnapshotParaCierreInput = {
+  id_proceso: string;
+  id_cliente?: string; // opcional si quieres validar que pertenezca al cliente
+  id_organizacion?: string; // opcional si quieres forzar multi-tenant
+};
+
+export type ProcesoCierreSnapshot = {
+  proceso: Proceso;
+  archivos: ProcesoArchivo[];
+};
+
+type DeleteByProcesoInput = {
+  id_proceso: string;
+  id_organizacion?: string;
+  transaction?: Transaction;
+};
+
+type DeleteProcesoInput = {
+  id_proceso: string;
+  id_organizacion?: string;
+  transaction?: Transaction;
+};
+
+type DeleteProcesoAndArchivosInput = {
+  id_proceso: string;
+  id_organizacion?: string;
+  transaction?: Transaction;
+};
+
+export const ProcesoRepository = {
+  // ===== Proceso =====
+
   create: async (data: ICreateProcesoDTO, id_organizacion: string) => {
-    // console.log('PROCESORESPOSITORY', data);
     return await Proceso.create({ ...data, id_organizacion });
   },
 
@@ -73,19 +105,16 @@ export const ProcesoRepository = {
     });
   },
 
-  // ==== Archivos ====
-  createArchivo: async (data: {
-    id_proceso: string;
-    categoria: any;
-    nombre_original: string;
-    mime_type: string;
-    tamano_bytes: number;
-    storage_provider?: string | null;
-    storage_bucket?: string | null;
-    storage_path: string;
-    public_url?: string | null;
-    activo?: boolean;
-  }) => {
+  // ===== Archivos =====
+
+  findArchivoById: async (input: FindArchivoByIdInput) => {
+    const where: any = { id_proceso_archivo: input.id_proceso_archivo };
+    if (input.id_organizacion) where.id_organizacion = input.id_organizacion;
+
+    return await ProcesoArchivo.findOne({ where });
+  },
+
+  createArchivo: async (data: Partial<ProcesoArchivo>) => {
     return await ProcesoArchivo.create(data as any);
   },
 
@@ -95,6 +124,7 @@ export const ProcesoRepository = {
       order: [['createdAt', 'DESC']]
     });
   },
+
   updateArchivo: async (input: UpdateArchivoInput) => {
     const where: any = { id_proceso_archivo: input.id_proceso_archivo };
     if (input.id_organizacion) where.id_organizacion = input.id_organizacion;
@@ -118,7 +148,92 @@ export const ProcesoRepository = {
     );
 
     if (affected === 0) return null;
-    // returning:true => rows[0] es el registro actualizado
     return rows?.[0] ?? null;
+  },
+
+  // ===== Cierre de proceso =====
+  // 1) Snapshot para armar correo + descargar archivos + luego borrar todo
+  getSnapshotParaCierre: async (input: GetSnapshotParaCierreInput): Promise<ProcesoCierreSnapshot | null> => {
+    const whereProceso: any = { id_proceso: input.id_proceso };
+    if (input.id_cliente) whereProceso.id_cliente = input.id_cliente;
+    if (input.id_organizacion) whereProceso.id_organizacion = input.id_organizacion;
+
+    const proceso = await Proceso.findOne({
+      where: whereProceso,
+      include: [
+        {
+          model: Cliente,
+          required: false
+        },
+        {
+          model: Organizacion,
+          attributes: ['nombre_organizacion'], // solo nombre
+          required: false
+        },
+        {
+          model: Afores,
+          attributes: ['nombre_afore'], // solo nombre
+          required: false
+        },
+        {
+          model: Asesor,
+          attributes: ['nombre_asesor', 'apellido_pat_asesor', 'apellido_mat_asesor'], // solo nombre
+          required: false
+        }
+      ]
+    });
+
+    if (!proceso) return null;
+
+    if (proceso.estatus_proceso === 'ACTIVO') {
+      throw new Error('No se puede finalizar un proceso en estado ACTIVO');
+    }
+
+    const whereArchivos: any = { id_proceso: input.id_proceso, activo: true };
+    const archivos = await ProcesoArchivo.findAll({
+      where: whereArchivos,
+      order: [['createdAt', 'DESC']]
+    });
+
+    return { proceso, archivos };
+  },
+
+  // 2) Borrar SOLO archivos (DB)
+  deleteArchivosByProceso: async (input: DeleteByProcesoInput): Promise<number> => {
+    const where: any = { id_proceso: input.id_proceso };
+    if (input.id_organizacion) where.id_organizacion = input.id_organizacion;
+
+    return await ProcesoArchivo.destroy({
+      where,
+      transaction: input.transaction
+    });
+  },
+
+  // 3) Borrar SOLO proceso (DB)
+  deleteProceso: async (input: DeleteProcesoInput): Promise<number> => {
+    const where: any = { id_proceso: input.id_proceso };
+    if (input.id_organizacion) where.id_organizacion = input.id_organizacion;
+
+    return await Proceso.destroy({
+      where,
+      transaction: input.transaction
+    });
+  },
+
+  // 4) Borrar proceso + archivos (DB) en orden (por si no tienes CASCADE)
+  deleteProcesoAndArchivos: async (input: DeleteProcesoAndArchivosInput) => {
+    const deletedArchivos = await ProcesoRepository.deleteArchivosByProceso({
+      id_proceso: input.id_proceso,
+      id_organizacion: input.id_organizacion,
+      transaction: input.transaction
+    });
+
+    const deletedProceso = await ProcesoRepository.deleteProceso({
+      id_proceso: input.id_proceso,
+      id_organizacion: input.id_organizacion,
+      transaction: input.transaction
+    });
+
+    return { deletedArchivos, deletedProceso };
   }
 };

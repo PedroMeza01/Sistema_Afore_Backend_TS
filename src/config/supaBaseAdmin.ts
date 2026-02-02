@@ -1,8 +1,8 @@
-// src/config/supabaseAdmin.ts
 import { createClient } from '@supabase/supabase-js';
 
-export const supabaseAdmin = createClient(
-  process.env.SUPABASE_URL!,
-  process.env.SUPABASE_SERVICE_ROLE_KEY!, // SOLO backend
-  { auth: { persistSession: false } }
-);
+const url = process.env.SUPABASE_URL!;
+const key = process.env.SUPABASE_SERVICE_ROLE_KEY!;
+
+export const supabase = createClient(url, key, {
+  auth: { persistSession: false }
+});

@@ -5,7 +5,6 @@ import usuarioRouter from '../modules/Usuarios/routes/AuthRouter';
 import aforesRoutes from '../modules/Afores/routes/aforeRouter';
 import asesoresRoutes from '../modules/Asesores/routes/asesorRouter';
 import { authMiddleware } from '../middleware/auth';
-import upload from '../modules/Uploads/router/upload';
 import routerProcesos from '../modules/Procesos/routes/procesoRouter';
 const router = Router();
 
@@ -14,6 +13,5 @@ router.use('/usuarios', usuarioRouter);
 router.use('/clientes', authMiddleware, ClientesRouter);
 router.use('/afores', authMiddleware, aforesRoutes);
 router.use('/asesores', authMiddleware, asesoresRoutes);
-router.use('/documento', authMiddleware, upload);
 router.use('/procesos', routerProcesos);
 export default router;

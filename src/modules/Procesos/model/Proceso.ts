@@ -1,5 +1,20 @@
-import { Table, Column, Model, PrimaryKey, DataType, Default, HasMany } from 'sequelize-typescript';
+import {
+  Table,
+  Column,
+  Model,
+  PrimaryKey,
+  DataType,
+  Default,
+  HasMany,
+  BelongsTo,
+  ForeignKey
+} from 'sequelize-typescript';
+
 import ProcesoArchivo from './ProcesoArchivo';
+import Organizacion from '../../Organizacion/model/Organizacion';
+import Cliente from '../../Clientes/model/Clientes';
+import Afores from '../../Afores/model/Afores';
+import Asesor from '../../Asesores/model/Asesor';
 
 @Table({
   tableName: 'proceso',
@@ -11,17 +26,55 @@ export default class Proceso extends Model {
   @Column(DataType.UUID)
   declare id_proceso: string;
 
+  // ===== ORGANIZACION =====
+  @ForeignKey(() => Organizacion)
   @Column(DataType.UUID)
   declare id_organizacion: string | null;
 
+  @BelongsTo(() => Organizacion, {
+    foreignKey: 'id_organizacion',
+    targetKey: 'id_organizacion',
+    as: 'organizacion'
+  })
+  declare organizacion?: Organizacion;
+
+  // ===== CLIENTE =====
+  @ForeignKey(() => Cliente)
   @Column(DataType.UUID)
   declare id_cliente: string;
 
+  @BelongsTo(() => Cliente, {
+    foreignKey: 'id_cliente',
+    targetKey: 'id_cliente',
+    as: 'cliente'
+  })
+  declare cliente?: Cliente;
+
+  // ===== AFORE =====
+  @ForeignKey(() => Afores)
   @Column(DataType.UUID)
   declare id_afore: string;
 
+  @BelongsTo(() => Afores, {
+    foreignKey: 'id_afore',
+    targetKey: 'id_afore',
+    as: 'afore'
+  })
+  declare afore?: Afores;
+
+  // ===== ASESOR =====
+  @ForeignKey(() => Asesor)
   @Column(DataType.UUID)
   declare id_asesor: string;
+
+  @BelongsTo(() => Asesor, {
+    foreignKey: 'id_asesor',
+    targetKey: 'id_asesor',
+    as: 'asesor'
+  })
+  declare asesor?: Asesor;
+
+  // ===== RESTO DE CAMPOS =====
 
   @Column(DataType.DATEONLY)
   declare fecha_firma: string | null;
@@ -88,7 +141,12 @@ export default class Proceso extends Model {
 
   @Column(DataType.TEXT)
   declare motivo_estatus: string | null;
-  
-  @HasMany(() => ProcesoArchivo)
+
+  // ===== ARCHIVOS =====
+  @HasMany(() => ProcesoArchivo, {
+    foreignKey: 'id_proceso',
+    sourceKey: 'id_proceso',
+    as: 'archivos'
+  })
   declare archivos?: ProcesoArchivo[];
 }

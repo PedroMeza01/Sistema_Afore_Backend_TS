@@ -13,7 +13,7 @@ router.patch('/:id_proceso', ProcesoController.update);
 
 // listados
 router.get('/cliente/:id_cliente', ProcesoController.listByCliente);
-
+router.delete('/finalizar/:id_cliente/:id_proceso', authMiddleware, ProcesoController.finalizarProceso);
 // archivos
 // multipart/form-data:
 // - file: (archivo)

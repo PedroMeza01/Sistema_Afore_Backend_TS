@@ -10,18 +10,44 @@ const getOrg = (req: AuthedRequest) => {
   return orgFromToken ?? req.body?.id_organizacion;
 };
 export class ProcesoController {
-  static replaceArchivo = async (req: AuthedRequest, res: Response) => {
-    const { id_proceso_archivo } = req.params;
-    const file = req.file;
-
-    // opcional: si recibes categoria
-    const { categoria } = req.body;
-
-    if (!id_proceso_archivo) res.status(400).json({ ok: false, message: 'Falta id_proceso_archivo' });
-    if (!file) res.status(400).json({ ok: false, message: 'Falta file' });
-
+  static finalizarProceso = async (req: AuthedRequest, res: Response) => {
+    //console.log(req);
+    const { id_cliente, id_proceso } = req.params;
+    const id_organizacion = getOrg(req);
     try {
-      const updated = await ProcesoService.replaceArchivo({
+      const result = await ProcesoService.finalizarProcesoEnviarCorreoYBorrarTodo({
+        id_cliente,
+        id_proceso,
+        id_organizacion
+      });
+
+      res.status(200).json({
+        ok: true,
+        message: 'Proceso finalizado, correo enviado y datos eliminados.',
+        data: result
+      });
+    } catch (error: any) {
+      console.log(error);
+      res.status(500).json({
+        ok: false,
+        message: error?.message ?? 'Error al finalizar proceso'
+      });
+    }
+  };
+  static replaceArchivo = async (req: AuthedRequest, res: Response) => {
+    try {
+      const { id_proceso_archivo } = req.params;
+      const file = req.file as Express.Multer.File | undefined;
+      const { categoria } = req.body;
+
+      if (!id_proceso_archivo) {
+        res.status(400).json({ ok: false, message: 'Falta id_proceso_archivo' });
+      }
+      if (!file) {
+        res.status(400).json({ ok: false, message: 'Falta file' });
+      }
+
+      const updated = await ProcesoService.replaceArchivoSupabase({
         id_proceso_archivo,
         categoria: categoria ?? null,
         file
@@ -33,6 +59,7 @@ export class ProcesoController {
       res.status(400).json({ ok: false, message: err?.message || 'Error al reemplazar archivo' });
     }
   };
+
   static create = async (req: AuthedRequest, res: Response) => {
     try {
       //  console.log(req.body);
@@ -75,24 +102,43 @@ export class ProcesoController {
 
   static uploadArchivo = async (req: Request, res: Response) => {
     try {
+      //console.log(req.params);
       const { id_proceso } = req.params;
+      //console.log(id_proceso);
       const { categoria, notas } = req.body;
 
       const file = (req as any).file as Express.Multer.File | undefined;
-      if (!file) res.status(400).json({ message: 'Archivo requerido (field: file)' });
-      if (!categoria) res.status(400).json({ message: 'categoria requerida' });
 
-      const created = await ProcesoService.uploadArchivo({ id_proceso, categoria, notas: notas ?? null }, file);
+      if (!file) {
+        res.status(400).json({ message: 'Archivo requerido (field: file)' });
+      }
 
-      res.status(201).json({ mensaje: created });
-    } catch (e: any) {
-      res.status(400).json({ message: e?.message || 'Error subiendo archivo' });
+      if (!categoria) {
+        res.status(400).json({ message: 'categoria requerida' });
+      }
+
+      const archivo = await ProcesoService.uploadArchivo(
+        {
+          id_proceso,
+          categoria,
+          notas: notas ?? null
+        },
+        file
+      );
+
+      res.status(201).json(archivo);
+    } catch (error: any) {
+      console.log(error);
+      res.status(400).json({
+        message: error?.message || 'Error subiendo archivo'
+      });
     }
   };
 
   static listArchivos = async (req: Request, res: Response) => {
     try {
       const rows = await ProcesoService.listArchivos(req.params.id_proceso);
+      console.log(rows);
       res.json({ mensaje: rows });
     } catch (e: any) {
       res.status(500).json({ message: e?.message || 'Error listando archivos' });
