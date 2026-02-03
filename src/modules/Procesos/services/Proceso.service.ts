@@ -65,11 +65,11 @@ export const ProcesoService = {
 
     if (!to) throw new Error(`Organización sin email_contacto_organizacion. id_organizacion=${proc.id_organizacion}`);
 
-    await Mailer.send({
+    /* await Mailer.send({
       to: proc.organizacion.email_contacto_organizacion,
       subject: `Proceso finalizado: ${proc.cliente?.nombre_cliente ?? ''} (${proc.id_proceso})`,
       html: buildHtml(proc)
-    });
+    });*/
     // 3) Una sola transacción para DB
     const t = await dbLocal.transaction({
       isolationLevel: Transaction.ISOLATION_LEVELS.READ_COMMITTED
