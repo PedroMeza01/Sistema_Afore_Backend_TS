@@ -4,17 +4,43 @@ import { ProcesoService } from '../services/Proceso.service';
 import { AuthedRequest } from '../../../middleware/auth';
 
 const getOrg = (req: AuthedRequest) => {
-  // Ideal: req.user?.id_organizacion
   const orgFromToken = (req.user as any)?.id_organizacion;
-
-  return orgFromToken ?? req.body?.id_organizacion;
+  return orgFromToken ?? (req.body as any)?.id_organizacion ?? (req.query as any)?.id_organizacion;
 };
-export class ProcesoController {
-  static finalizarProceso = async (req: AuthedRequest, res: Response) => {
-    //console.log(req);
-    const { id_cliente, id_proceso } = req.params;
-    const id_organizacion = getOrg(req);
+
+export const ProcesoController = {
+  list: async (req: any, res: Response) => {
     try {
+      // AJUSTA: depende cómo guardas auth. Ej: req.user.id_organizacion
+      const id_organizacion = req.user?.id_organizacion;
+      if (!id_organizacion) {
+        res.status(401).json({ message: 'No autorizado' });
+      }
+
+      const page = Math.max(Number(req.query.page || 1), 1);
+      const limit = Math.min(Math.max(Number(req.query.limit || 10), 1), 100);
+      const search = (req.query.search || '').toString();
+      const f = (req.query.f || '').toString();
+
+      const data = await ProcesoService.list({ id_organizacion, page, limit, search, f });
+      res.json(data);
+    } catch (err: any) {
+      res.status(500).json({ message: err?.message || 'Error en list procesos' });
+    }
+  },
+  finalizarProceso: async (req: AuthedRequest, res: Response) => {
+    try {
+      const { id_cliente, id_proceso } = req.params;
+      const id_organizacion = getOrg(req);
+
+      if (!id_organizacion) {
+        res.status(401).json({ ok: false, message: 'No autorizado: falta id_organizacion' });
+      }
+
+      if (!id_cliente || !id_proceso) {
+        res.status(400).json({ ok: false, message: 'Faltan parámetros: id_cliente o id_proceso' });
+      }
+
       const result = await ProcesoService.finalizarProcesoEnviarCorreoYBorrarTodo({
         id_cliente,
         id_proceso,
@@ -33,18 +59,20 @@ export class ProcesoController {
         message: error?.message ?? 'Error al finalizar proceso'
       });
     }
-  };
-  static replaceArchivo = async (req: AuthedRequest, res: Response) => {
+  },
+
+  replaceArchivo: async (req: AuthedRequest, res: Response) => {
     try {
       const { id_proceso_archivo } = req.params;
       const file = req.file as Express.Multer.File | undefined;
-      const { categoria } = req.body;
+      const { categoria } = req.body as any;
 
       if (!id_proceso_archivo) {
         res.status(400).json({ ok: false, message: 'Falta id_proceso_archivo' });
       }
+
       if (!file) {
-        res.status(400).json({ ok: false, message: 'Falta file' });
+        res.status(400).json({ ok: false, message: 'Falta file (field: file)' });
       }
 
       const updated = await ProcesoService.replaceArchivoSupabase({
@@ -53,68 +81,100 @@ export class ProcesoController {
         file
       });
 
-      res.status(200).json({ ok: true, mensaje: updated });
+      res.status(200).json({ ok: true, data: updated });
     } catch (err: any) {
       console.log(err);
       res.status(400).json({ ok: false, message: err?.message || 'Error al reemplazar archivo' });
     }
-  };
+  },
 
-  static create = async (req: AuthedRequest, res: Response) => {
+  create: async (req: AuthedRequest, res: Response) => {
     try {
-      //  console.log(req.body);
-      const id_origanizacion = getOrg(req);
-      const row = await ProcesoService.create(req.body, id_origanizacion);
-      res.status(201).json({ mensaje: row });
+      const id_organizacion = getOrg(req);
+
+      if (!id_organizacion) {
+        res.status(401).json({ ok: false, message: 'No autorizado: falta id_organizacion' });
+      }
+
+      const row = await ProcesoService.create(req.body, id_organizacion);
+      res.status(201).json({ ok: true, data: row });
     } catch (e: any) {
-      res.status(400).json({ message: e?.message || 'Error creando proceso' });
+      res.status(400).json({ ok: false, message: e?.message || 'Error creando proceso' });
     }
-  };
+  },
 
-  static getById = async (req: Request, res: Response) => {
+  getById: async (req: Request, res: Response) => {
     try {
-      const row = await ProcesoService.getById(req.params.id_proceso);
-      if (!row) res.status(404).json({ message: 'No encontrado' });
-      res.json({ mensaje: row });
+      const { id_proceso } = req.params as any;
+
+      if (!id_proceso) {
+        res.status(400).json({ ok: false, message: 'Falta id_proceso' });
+      }
+
+      const row = await ProcesoService.getById(id_proceso);
+
+      if (!row) {
+        res.status(404).json({ ok: false, message: 'No encontrado' });
+      }
+
+      res.json({ ok: true, data: row });
     } catch (e: any) {
-      res.status(500).json({ message: e?.message || 'Error' });
+      res.status(500).json({ ok: false, message: e?.message || 'Error' });
     }
-  };
+  },
 
-  static update = async (req: Request, res: Response) => {
+  update: async (req: Request, res: Response) => {
     try {
-      const row = await ProcesoService.update(req.params.id_proceso, req.body);
-      if (!row) res.status(404).json({ message: 'No encontrado' });
-      res.json({ mensaje: row });
+      const { id_proceso } = req.params as any;
+
+      if (!id_proceso) {
+        res.status(400).json({ ok: false, message: 'Falta id_proceso' });
+      }
+
+      const row = await ProcesoService.update(id_proceso, req.body);
+
+      if (!row) {
+        res.status(404).json({ ok: false, message: 'No encontrado' });
+      }
+
+      res.json({ ok: true, data: row });
     } catch (e: any) {
-      res.status(400).json({ message: e?.message || 'Error actualizando' });
+      res.status(400).json({ ok: false, message: e?.message || 'Error actualizando' });
     }
-  };
+  },
 
-  static listByCliente = async (req: Request, res: Response) => {
+  listByCliente: async (req: Request, res: Response) => {
     try {
-      const rows = await ProcesoService.listByCliente(req.params.id_cliente);
-      res.json({ mensaje: rows });
+      const { id_cliente } = req.params as any;
+
+      if (!id_cliente) {
+        res.status(400).json({ ok: false, message: 'Falta id_cliente' });
+      }
+
+      const rows = await ProcesoService.listByCliente(id_cliente);
+  
+      res.json({ ok: true, data: rows });
     } catch (e: any) {
-      res.status(500).json({ message: e?.message || 'Error listando' });
+      res.status(500).json({ ok: false, message: e?.message || 'Error listando' });
     }
-  };
+  },
 
-  static uploadArchivo = async (req: Request, res: Response) => {
+  uploadArchivo: async (req: Request, res: Response) => {
     try {
-      //console.log(req.params);
-      const { id_proceso } = req.params;
-      //console.log(id_proceso);
-      const { categoria, notas } = req.body;
-
+      const { id_proceso } = req.params as any;
+      const { categoria, notas } = req.body as any;
       const file = (req as any).file as Express.Multer.File | undefined;
 
+      if (!id_proceso) {
+        res.status(400).json({ ok: false, message: 'Falta id_proceso' });
+      }
+
       if (!file) {
-        res.status(400).json({ message: 'Archivo requerido (field: file)' });
+        res.status(400).json({ ok: false, message: 'Archivo requerido (field: file)' });
       }
 
       if (!categoria) {
-        res.status(400).json({ message: 'categoria requerida' });
+        res.status(400).json({ ok: false, message: 'categoria requerida' });
       }
 
       const archivo = await ProcesoService.uploadArchivo(
@@ -126,22 +186,28 @@ export class ProcesoController {
         file
       );
 
-      res.status(201).json(archivo);
+      res.status(201).json({ ok: true, data: archivo });
     } catch (error: any) {
       console.log(error);
       res.status(400).json({
+        ok: false,
         message: error?.message || 'Error subiendo archivo'
       });
     }
-  };
+  },
 
-  static listArchivos = async (req: Request, res: Response) => {
+  listArchivos: async (req: Request, res: Response) => {
     try {
-      const rows = await ProcesoService.listArchivos(req.params.id_proceso);
-      console.log(rows);
-      res.json({ mensaje: rows });
+      const { id_proceso } = req.params as any;
+
+      if (!id_proceso) {
+        res.status(400).json({ ok: false, message: 'Falta id_proceso' });
+      }
+
+      const rows = await ProcesoService.listArchivos(id_proceso);
+      res.json({ ok: true, data: rows });
     } catch (e: any) {
-      res.status(500).json({ message: e?.message || 'Error listando archivos' });
+      res.status(500).json({ ok: false, message: e?.message || 'Error listando archivos' });
     }
-  };
-}
+  }
+};

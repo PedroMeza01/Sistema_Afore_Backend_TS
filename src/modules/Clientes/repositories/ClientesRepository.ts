@@ -2,8 +2,22 @@ import Clientes from '../model/Clientes';
 import Organizacion from '../../Organizacion/model/Organizacion';
 import Asesor from '../../Asesores/model/Asesor';
 import { ICreateClienteDTO, IUpdateClienteDTO } from '../interface/Clientes.interface';
-import { Op } from 'sequelize';
+import { Op, Transaction } from 'sequelize';
 export const ClientesRepository = {
+  borrarCliente: async (input: { id_cliente: string; transaction: Transaction }) => {
+    const { id_cliente, transaction } = input;
+
+    const deleted = await Clientes.destroy({
+      where: { id_cliente },
+      transaction
+    });
+
+    if (deleted === 0) {
+      throw new Error(`Cliente no encontrado o ya eliminado. id_cliente=${id_cliente}`);
+    }
+
+    return deleted;
+  },
   getAllPaginated: async ({ /*id_organizacion, */ page, limit, search }) => {
     const offset = (page - 1) * limit;
 

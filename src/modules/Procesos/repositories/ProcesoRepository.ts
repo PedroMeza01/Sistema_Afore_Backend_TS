@@ -167,7 +167,7 @@ export const ProcesoRepository = {
         },
         {
           model: Organizacion,
-          attributes: ['nombre_organizacion'], // solo nombre
+          attributes: ['nombre_organizacion', 'email_contacto_organizacion'], // solo nombre
           required: false
         },
         {
@@ -199,9 +199,8 @@ export const ProcesoRepository = {
   },
 
   // 2) Borrar SOLO archivos (DB)
-  deleteArchivosByProceso: async (input: DeleteByProcesoInput): Promise<number> => {
+  deleteArchivosByProceso: async (input: DeleteByProcesoInput) => {
     const where: any = { id_proceso: input.id_proceso };
-    if (input.id_organizacion) where.id_organizacion = input.id_organizacion;
 
     return await ProcesoArchivo.destroy({
       where,
@@ -210,7 +209,7 @@ export const ProcesoRepository = {
   },
 
   // 3) Borrar SOLO proceso (DB)
-  deleteProceso: async (input: DeleteProcesoInput): Promise<number> => {
+  deleteProceso: async (input: DeleteProcesoInput) => {
     const where: any = { id_proceso: input.id_proceso };
     if (input.id_organizacion) where.id_organizacion = input.id_organizacion;
 
@@ -218,22 +217,5 @@ export const ProcesoRepository = {
       where,
       transaction: input.transaction
     });
-  },
-
-  // 4) Borrar proceso + archivos (DB) en orden (por si no tienes CASCADE)
-  deleteProcesoAndArchivos: async (input: DeleteProcesoAndArchivosInput) => {
-    const deletedArchivos = await ProcesoRepository.deleteArchivosByProceso({
-      id_proceso: input.id_proceso,
-      id_organizacion: input.id_organizacion,
-      transaction: input.transaction
-    });
-
-    const deletedProceso = await ProcesoRepository.deleteProceso({
-      id_proceso: input.id_proceso,
-      id_organizacion: input.id_organizacion,
-      transaction: input.transaction
-    });
-
-    return { deletedArchivos, deletedProceso };
   }
 };

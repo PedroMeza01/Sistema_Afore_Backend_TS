@@ -1,6 +1,4 @@
 // src/modules/Proceso/interfaces/proceso.dto.ts
-import type { EstatusProceso, ModoRetiro, ResultadoTramite, SiNo, TipoCobro, TipoFirma } from '../model/Proceso';
-import { CategoriaArchivo } from '../model/ProcesoArchivo';
 
 export interface ICreateProcesoDTO {
   id_organizacion?: string;
@@ -9,7 +7,7 @@ export interface ICreateProcesoDTO {
   id_asesor: string;
 
   fecha_firma: string; // YYYY-MM-DD
-  tipo_firma: TipoFirma;
+  tipo_firma: string;
 
   fecha_baja_imss?: string | null;
   fecha_46_dias?: string | null;
@@ -17,25 +15,25 @@ export interface ICreateProcesoDTO {
   requiere_cita_afore?: boolean;
   cita_afore?: string | null;
 
-  acompanamiento?: SiNo;
-  modo_retiro?: ModoRetiro;
+  acompanamiento?: string;
+  modo_retiro?: string;
 
   expediente_actualizado?: boolean;
   app_vinculada?: boolean;
 
   tramite_solicitado?: boolean;
-  resultado_tramite?: ResultadoTramite | null;
+  resultado_tramite?: string | null;
   observacion_tramite?: string | null;
 
   listo_para_cobro?: boolean;
   fecha_cobro?: string | null;
-  tipo_cobro?: TipoCobro | null;
+  tipo_cobro?: string | null;
   monto_cobrar?: string | null;
   comision_asesora?: string | null;
   encuesta_aplicada?: boolean;
   bono_asesora?: string; // DECIMAL string
 
-  estatus_proceso?: EstatusProceso;
+  estatus_proceso?: string;
   motivo_estatus?: string | null;
 }
 
@@ -43,7 +41,7 @@ export interface IUpdateProcesoDTO extends Partial<ICreateProcesoDTO> {}
 
 export interface IUploadProcesoArchivoDTO {
   id_proceso: string;
-  categoria: CategoriaArchivo;
+  categoria: string;
   notas?: string | null;
   uploaded_by?: string | null; // si luego lo agregas
 }

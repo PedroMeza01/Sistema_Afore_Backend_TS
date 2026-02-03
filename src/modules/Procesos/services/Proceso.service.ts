@@ -3,22 +3,18 @@ import { ICreateProcesoDTO, IUpdateProcesoDTO, IUploadProcesoArchivoDTO } from '
 import { ProcesoRepository } from '../repositories/ProcesoRepository';
 import crypto from 'crypto';
 import path from 'path';
-import fs from 'fs/promises';
-import { PassThrough } from 'stream';
 import { dbLocal } from '../../../config/db';
 import { Transaction } from 'sequelize';
+import { Mailer } from './Mailer';
+import { removeSupabaseFiles } from '../repositories/removeSupabaseFiles';
+import { ClientesRepository } from '../../Clientes/repositories/ClientesRepository';
+import { DashboardProcesosRepository } from '../../DashbordProcesos/repositories/DashboardProcesosRepository';
 const DEFAULT_BUCKET = process.env.SUPABASE_BUCKET_PROCESOS || 'procesos';
 
 function sanitizeFileName(name: string) {
   return name.replace(/[^\w.\-]+/g, '_');
 }
 
-async function safeUnlink(p?: string | null) {
-  if (!p) return;
-  try {
-    await fs.unlink(p);
-  } catch {}
-}
 function getExt(original: string) {
   const clean = (original || 'archivo').trim();
   const last = clean.split('.').pop();
@@ -40,6 +36,18 @@ type FinalizarInput = {
   id_organizacion: string;
 };
 export const ProcesoService = {
+  list: async (input: { id_organizacion: string; page: number; limit: number; search?: string; f?: string }) => {
+    const today = new Date().toISOString().slice(0, 10);
+
+    return await DashboardProcesosRepository.listPaginated({
+      id_organizacion: input.id_organizacion,
+      page: input.page,
+      limit: input.limit,
+      search: input.search,
+      f: input.f,
+      today
+    });
+  },
   calcBono(data: { tipo_firma?: string; encuesta_aplicada?: boolean }) {
     const base = data.tipo_firma === 'ASESOR' ? 700 : 0;
     const extra = data.encuesta_aplicada ? 100 : 0;
@@ -51,40 +59,55 @@ export const ProcesoService = {
     // 1) Snapshot
     const snapshot = await ProcesoRepository.getSnapshotParaCierre({ id_cliente, id_proceso, id_organizacion });
     if (!snapshot) throw new Error('Proceso/cliente no encontrado');
-    console.log(snapshot);
-    // 2) Enviar correo (si falla, NO borres)
-    /* await Mailer.send({
-      to,
-      subject: `Proceso finalizado: ${snapshot.cliente?.nombre ?? ''} (${id_proceso})`,
-      html: buildHtml(snapshot)
-    });
+    //console.log(snapshot.proceso.dataValues.organizacion.email_contacto_organizacion);
+    const to = snapshot.proceso.dataValues.organizacion.email_contacto_organizacion;
+    const proc = snapshot.proceso.toJSON();
 
+    if (!to) throw new Error(`Organización sin email_contacto_organizacion. id_organizacion=${proc.id_organizacion}`);
+
+    await Mailer.send({
+      to: proc.organizacion.email_contacto_organizacion,
+      subject: `Proceso finalizado: ${proc.cliente?.nombre_cliente ?? ''} (${proc.id_proceso})`,
+      html: buildHtml(proc)
+    });
     // 3) Una sola transacción para DB
     const t = await dbLocal.transaction({
       isolationLevel: Transaction.ISOLATION_LEVELS.READ_COMMITTED
     });
 
+    const archivos = snapshot.archivos;
+
     try {
+      await ProcesoRepository.deleteArchivosByProceso({ id_proceso, transaction: t });
+      await ProcesoRepository.deleteProceso({ id_proceso, transaction: t });
+      await ClientesRepository.borrarCliente({ id_cliente, transaction: t });
       // 3.1) Borrar Storage (si esto falla, hacemos rollback de DB)
-      await removeSupabaseFiles(snapshot.documentos);
+
+      //await removeSupabaseFiles(snapshot.archivos);
 
       // 3.2) Borrar DB (pasando t)
-      await ProcesoRepository.borrarDocumentosProceso({ id_proceso, transaction: t });
-      await ProcesoRepository.borrarProceso({ id_proceso, transaction: t });
-      await ProcesoRepository.borrarCliente({ id_cliente, transaction: t });
+      //await ProcesoRepository.borrarDocumentosProceso({ id_proceso, transaction: t });
+      //await ProcesoRepository.borrarProceso({ id_proceso, transaction: t });
+      //await ProcesoRepository.borrarCliente({ id_cliente, transaction: t });
 
       await t.commit();
-
-      return {
-        id_cliente,
-        id_proceso,
-        emailedTo: to,
-        deletedDocs: snapshot.documentos.length
-      };
     } catch (err) {
       await t.rollback();
       throw err;
-    }*/
+    }
+
+    try {
+      await removeSupabaseFiles(archivos);
+    } catch (error) {
+      throw new Error('No se pudo borrar');
+    }
+    return {
+      id_cliente,
+      id_proceso,
+      emailedTo: to,
+      deletedDb: true,
+      storageDeleted: true
+    };
   },
 
   replaceArchivoSupabase: async (input: {
@@ -248,101 +271,124 @@ export const ProcesoService = {
 //HERPERS
 
 /** Helpers */
-
-function totalBytes(files: { buffer: Buffer }[]) {
-  return files.reduce((acc, f) => acc + f.buffer.length, 0);
-}
-
-function buildHtml(snapshot: any) {
-  const { cliente, proceso, documentos } = snapshot;
-
-  // pon aquí TODOS tus campos relevantes
-  return `
-    <h2>Proceso finalizado</h2>
-    <h3>Cliente</h3>
-    <ul>
-      <li><b>Nombre:</b> ${escapeHtml(cliente?.nombre ?? '')}</li>
-      <li><b>ID Cliente:</b> ${escapeHtml(cliente?.id_cliente ?? '')}</li>
-      <li><b>CURP:</b> ${escapeHtml(cliente?.curp ?? '')}</li>
-      <li><b>Teléfono:</b> ${escapeHtml(cliente?.telefono ?? '')}</li>
-      <li><b>Email:</b> ${escapeHtml(cliente?.email ?? '')}</li>
-    </ul>
-
-    <h3>Proceso</h3>
-    <ul>
-      <li><b>ID Proceso:</b> ${escapeHtml(proceso?.id_proceso ?? '')}</li>
-      <li><b>Tipo:</b> ${escapeHtml(proceso?.tipo ?? '')}</li>
-      <li><b>Estado:</b> ${escapeHtml(proceso?.estado ?? '')}</li>
-      <li><b>Creado:</b> ${escapeHtml(String(proceso?.createdAt ?? ''))}</li>
-      <li><b>Finalizado:</b> ${new Date().toISOString()}</li>
-    </ul>
-
-    <h3>Documentos (${documentos?.length ?? 0})</h3>
-    <ul>
-      ${(documentos ?? []).map((d: any) => `<li>${escapeHtml(d.nombre ?? d.storage_path ?? '')}</li>`).join('')}
-    </ul>
-
-    <p>Adjuntos incluidos en este correo.</p>
-  `;
-}
-
-function escapeHtml(s: string) {
+function escapeHtml(input: any) {
+  const s = String(input ?? '');
   return s
-    .replaceAll('&', '&amp;')
-    .replaceAll('<', '&lt;')
-    .replaceAll('>', '&gt;')
-    .replaceAll('"', '&quot;')
-    .replaceAll("'", '&#039;');
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#39;');
 }
 
-type DocRow = {
-  id_documento: string;
-  nombre?: string | null;
-  storage_bucket: string;
-  storage_path: string;
-  mime?: string | null;
-};
+function formatValue(v: any): string {
+  if (v === null || v === undefined) return '';
+  if (v instanceof Date) return v.toISOString();
+  if (typeof v === 'string') return v;
+  if (typeof v === 'number' || typeof v === 'boolean') return String(v);
+  return JSON.stringify(v);
+}
 
-async function downloadSupabaseFiles(documentos: DocRow[]) {
-  const out: { filename: string; buffer: Buffer; contentType: string }[] = [];
+function flatten(obj: any, prefix = ''): Array<{ key: string; value: any }> {
+  const out: Array<{ key: string; value: any }> = [];
+  if (obj === null || obj === undefined) return out;
 
-  for (const d of documentos) {
-    const bucket = d.storage_bucket;
-    const path = d.storage_path;
+  // evita arrays/objects raros
+  if (typeof obj !== 'object') {
+    out.push({ key: prefix || 'value', value: obj });
+    return out;
+  }
 
-    const { data, error } = await supabase.storage.from(bucket).download(path);
-    if (error) throw new Error(`No se pudo descargar archivo ${path}: ${error.message}`);
+  for (const k of Object.keys(obj)) {
+    const v = obj[k];
+    const key = prefix ? `${prefix}.${k}` : k;
 
-    const arrayBuffer = await data.arrayBuffer();
-    const buffer = Buffer.from(arrayBuffer);
-
-    out.push({
-      filename: sanitizeFilename(d.nombre ?? path.split('/').pop() ?? 'archivo'),
-      buffer,
-      contentType: d.mime ?? 'application/octet-stream'
-    });
+    if (v && typeof v === 'object' && !(v instanceof Date) && !Array.isArray(v)) {
+      out.push(...flatten(v, key));
+    } else if (Array.isArray(v)) {
+      // arrays: imprime tamaño y cada índice si quieres
+      out.push({ key: `${key}.length`, value: v.length });
+      v.forEach((item, i) => {
+        if (item && typeof item === 'object') out.push(...flatten(item, `${key}[${i}]`));
+        else out.push({ key: `${key}[${i}]`, value: item });
+      });
+    } else {
+      out.push({ key, value: v });
+    }
   }
 
   return out;
 }
 
-async function removeSupabaseFiles(documentos: DocRow[]) {
-  // agrupar por bucket para evitar llamadas innecesarias
-  const byBucket = documentos.reduce<Record<string, string[]>>((acc, d) => {
-    acc[d.storage_bucket] ??= [];
-    acc[d.storage_bucket].push(d.storage_path);
-    return acc;
-  }, {});
+export function buildHtml(proc: any) {
+  const rows = flatten(proc)
+    .map(({ key, value }) => {
+      return `
+        <tr>
+          <td style="padding:6px 8px;border:1px solid #ddd;white-space:nowrap;"><b>${escapeHtml(key)}</b></td>
+          <td style="padding:6px 8px;border:1px solid #ddd;">${escapeHtml(formatValue(value))}</td>
+        </tr>
+      `;
+    })
+    .join('');
 
-  for (const bucket of Object.keys(byBucket)) {
-    const paths = byBucket[bucket];
+  const cliente = proc?.cliente ?? {};
+  const organizacion = proc?.organizacion ?? {};
+  const asesor = proc?.asesor ?? {};
+  const afore = proc?.afore ?? {};
 
-    const { error } = await supabase.storage.from(bucket).remove(paths);
-    if (error) throw new Error(`No se pudo borrar archivos en storage bucket=${bucket}: ${error.message}`);
-  }
+  return `
+  <div style="font-family: Arial, sans-serif; font-size: 14px; color:#111;">
+    <h2 style="margin:0 0 12px;">Proceso finalizado</h2>
+
+    <p style="margin:0 0 16px;">
+      <b>Estatus:</b> ${escapeHtml(proc?.estatus_proceso)}<br/>
+      <b>Creado:</b> ${escapeHtml(new Date().toISOString())}
+    </p>
+
+    <h3 style="margin:16px 0 8px;">Resumen</h3>
+    <table cellspacing="0" cellpadding="0" style="border-collapse:collapse;width:100%;margin-bottom:12px;">
+      <tr>
+        <td style="padding:6px 8px;border:1px solid #ddd;"><b>Cliente</b></td>
+        <td style="padding:6px 8px;border:1px solid #ddd;">
+          ${escapeHtml(`${cliente.nombre_cliente ?? ''} ${cliente.apellido_pat_cliente ?? ''} ${cliente.apellido_mat_cliente ?? ''}`.trim())}
+          <br/>${escapeHtml(cliente.email_cliente ?? '')}
+          <br/>${escapeHtml(cliente.telefono_cliente ?? '')}
+        </td>
+      </tr>
+      <tr>
+        <td style="padding:6px 8px;border:1px solid #ddd;"><b>Organización</b></td>
+        <td style="padding:6px 8px;border:1px solid #ddd;">
+          ${escapeHtml(organizacion.nombre_organizacion ?? '')}
+          <br/>${escapeHtml(organizacion.email_contacto_organizacion ?? '')}
+        </td>
+      </tr>
+      <tr>
+        <td style="padding:6px 8px;border:1px solid #ddd;"><b>Asesor</b></td>
+        <td style="padding:6px 8px;border:1px solid #ddd;">
+          ${escapeHtml(`${asesor.nombre_asesor ?? ''} ${asesor.apellido_pat_asesor ?? ''} ${asesor.apellido_mat_asesor ?? ''}`.trim())}
+        </td>
+      </tr>
+      <tr>
+        <td style="padding:6px 8px;border:1px solid #ddd;"><b>Afore</b></td>
+        <td style="padding:6px 8px;border:1px solid #ddd;">
+          ${escapeHtml(afore.nombre_afore ?? '')}
+        </td>
+      </tr>
+    </table>
+
+    <h3 style="margin:16px 0 8px;">Detalle completo (todas las llaves)</h3>
+    <table cellspacing="0" cellpadding="0" style="border-collapse:collapse;width:100%;">
+      <thead>
+        <tr>
+          <th align="left" style="padding:6px 8px;border:1px solid #ddd;background:#f5f5f5;">Campo</th>
+          <th align="left" style="padding:6px 8px;border:1px solid #ddd;background:#f5f5f5;">Valor</th>
+        </tr>
+      </thead>
+      <tbody>
+        ${rows}
+      </tbody>
+    </table>
+  </div>
+  `;
 }
-
-function sanitizeFilename(name: string) {
-  return name.replace(/[<>:"/\\|?*\x00-\x1F]/g, '_').slice(0, 150);
-}
-
