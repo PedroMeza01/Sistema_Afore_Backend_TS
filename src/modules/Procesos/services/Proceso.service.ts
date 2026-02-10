@@ -48,11 +48,7 @@ export const ProcesoService = {
       today
     });
   },
-  calcBono(data: { tipo_firma?: string; encuesta_aplicada?: boolean }) {
-    const base = data.tipo_firma === 'ASESOR' ? 700 : 0;
-    const extra = data.encuesta_aplicada ? 100 : 0;
-    return (base + extra).toFixed(2);
-  },
+
   finalizarProcesoEnviarCorreoYBorrarTodo: async (input: FinalizarInput) => {
     const { id_cliente, id_proceso, id_organizacion } = input;
 
@@ -180,11 +176,9 @@ export const ProcesoService = {
   },
   create: async (data: ICreateProcesoDTO, id_organizacion: string) => {
     // ✅ OJO: referenciar con el objeto
-    const bono = ProcesoService.calcBono({ tipo_firma: data.tipo_firma, encuesta_aplicada: data.encuesta_aplicada });
 
     const payload: ICreateProcesoDTO = {
-      ...data,
-      bono_asesora: data.bono_asesora ?? bono
+      ...data
     };
 
     return await ProcesoRepository.create(payload, id_organizacion);
@@ -195,17 +189,7 @@ export const ProcesoService = {
   },
 
   update: async (id_proceso: string, data: IUpdateProcesoDTO) => {
-    const shouldRecalc =
-      (data.tipo_firma !== undefined || data.encuesta_aplicada !== undefined) && data.bono_asesora === undefined;
-
     const patch: IUpdateProcesoDTO = { ...data };
-
-    if (shouldRecalc) {
-      patch.bono_asesora = ProcesoService.calcBono({
-        tipo_firma: data.tipo_firma,
-        encuesta_aplicada: data.encuesta_aplicada
-      });
-    }
 
     if (patch.listo_para_cobro) {
       if (!patch.fecha_cobro) throw new Error('fecha_cobro requerida');

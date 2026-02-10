@@ -117,7 +117,7 @@ export const ProcesoController = {
         res.status(404).json({ ok: false, message: 'No encontrado' });
       }
 
-      res.json({ ok: true, data: row });
+      res.json({ ok: true, row });
     } catch (e: any) {
       res.status(500).json({ ok: false, message: e?.message || 'Error' });
     }
@@ -152,7 +152,7 @@ export const ProcesoController = {
       }
 
       const rows = await ProcesoService.listByCliente(id_cliente);
-  
+
       res.json({ ok: true, data: rows });
     } catch (e: any) {
       res.status(500).json({ ok: false, message: e?.message || 'Error listando' });
