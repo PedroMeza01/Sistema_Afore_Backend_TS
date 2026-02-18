@@ -19,6 +19,7 @@ export const dbLocal = new Sequelize(process.env.DATABASE_URL!, {
   ],
   logging: false
 });
+/*PRUEBA */
 /*
 
 import { Sequelize } from 'sequelize-typescript';
