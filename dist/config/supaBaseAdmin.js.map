@@ -1,1 +1,0 @@
-{"version":3,"file":"supaBaseAdmin.js","sourceRoot":"","sources":["../../src/config/supaBaseAdmin.ts"],"names":[],"mappings":";;;AAAA,uDAAqD;AAErD,MAAM,GAAG,GAAG,OAAO,CAAC,GAAG,CAAC,YAAa,CAAC;AACtC,MAAM,GAAG,GAAG,OAAO,CAAC,GAAG,CAAC,yBAA0B,CAAC;AAEtC,QAAA,QAAQ,GAAG,IAAA,0BAAY,EAAC,GAAG,EAAE,GAAG,EAAE;IAC7C,IAAI,EAAE,EAAE,cAAc,EAAE,KAAK,EAAE;CAChC,CAAC,CAAC"}

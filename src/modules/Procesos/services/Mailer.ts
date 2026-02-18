@@ -13,7 +13,7 @@ const transporter = nodemailer.createTransport({
 export const Mailer = {
   send: async (input: { to: string | string[]; subject: string; html: string }) => {
     return transporter.sendMail({
-      from: `"CRM Saher" <${process.env.SMTP_FROM}>`,
+      from: `"CRM AFORE" <${process.env.SMTP_FROM}>`,
       to: input.to,
       subject: input.subject,
       html: input.html

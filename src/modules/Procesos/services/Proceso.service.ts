@@ -60,12 +60,12 @@ export const ProcesoService = {
     const proc = snapshot.proceso.toJSON();
 
     if (!to) throw new Error(`Organización sin email_contacto_organizacion. id_organizacion=${proc.id_organizacion}`);
-
-    /* await Mailer.send({
+    // console.log(buildHtml(proc));
+    await Mailer.send({
       to: proc.organizacion.email_contacto_organizacion,
-      subject: `Proceso finalizado: ${proc.cliente?.nombre_cliente ?? ''} (${proc.id_proceso})`,
+      subject: `Proceso finalizado: ${proc.cliente?.nombre_cliente ?? ''}`,
       html: buildHtml(proc)
-    });*/
+    });
     // 3) Una sola transacción para DB
     const t = await dbLocal.transaction({
       isolationLevel: Transaction.ISOLATION_LEVELS.READ_COMMITTED
@@ -74,17 +74,9 @@ export const ProcesoService = {
     const archivos = snapshot.archivos;
 
     try {
-      await ProcesoRepository.deleteArchivosByProceso({ id_proceso, transaction: t });
-      await ProcesoRepository.deleteProceso({ id_proceso, transaction: t });
-      await ClientesRepository.borrarCliente({ id_cliente, transaction: t });
-      // 3.1) Borrar Storage (si esto falla, hacemos rollback de DB)
-
-      //await removeSupabaseFiles(snapshot.archivos);
-
-      // 3.2) Borrar DB (pasando t)
-      //await ProcesoRepository.borrarDocumentosProceso({ id_proceso, transaction: t });
-      //await ProcesoRepository.borrarProceso({ id_proceso, transaction: t });
-      //await ProcesoRepository.borrarCliente({ id_cliente, transaction: t });
+      // await ProcesoRepository.deleteArchivosByProceso({ id_proceso, transaction: t });
+      //await ProcesoRepository.deleteProceso({ id_proceso, transaction: t });
+      //await ClientesRepository.borrarCliente({ id_cliente, transaction: t });
 
       await t.commit();
     } catch (err) {

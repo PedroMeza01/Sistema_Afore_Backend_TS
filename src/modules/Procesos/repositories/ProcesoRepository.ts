@@ -160,10 +160,35 @@ export const ProcesoRepository = {
 
     const proceso = await Proceso.findOne({
       where: whereProceso,
+      attributes: [
+        'fecha_firma',
+        'tipo_firma',
+        'fecha_baja_imss',
+        'fecha_46_dias',
+        'requiere_cita_afore',
+        'cita_afore',
+        'acompanamiento',
+        'modo_retiro',
+        'expediente_actualizado',
+        'app_vinculada',
+        'tramite_solicitado',
+        'resultado_tramite',
+        'observacion_tramite',
+        'listo_para_cobro',
+        'fecha_cobro',
+        'tipo_cobro',
+        'monto_cobrar',
+        'comision_asesora',
+        'encuesta_aplicada',
+        'bono_asesora',
+        'estatus_proceso',
+        'motivo_estatus'
+      ],
       include: [
         {
           model: Cliente,
-          required: false
+          required: false,
+          attributes: ['nombre_cliente', 'apellido_pat_cliente', 'apellido_mat_cliente', 'curp_cliente', 'nss_cliente']
         },
         {
           model: Organizacion,
