@@ -47,7 +47,7 @@ export class ClientesController {
       const created = await ClientesServices.create(req.body, id_organizacion);
       res.status(201).json(created);
     } catch (error: any) {
-      console.log(error);
+      //  console.log(error);
       res.status(400).json({ mensaje: error?.message || error });
     }
   };

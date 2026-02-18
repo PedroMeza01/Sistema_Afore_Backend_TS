@@ -7,7 +7,7 @@ export const OrganizacionController = {
       const data = await OrganizacionService.create(req.body);
       res.status(201).json(data);
     } catch (error: any) {
-      console.log(error);
+      //  console.log(error);
       res.status(500).json({
         message: error?.message || 'Error al crear organización',
         error: error?.message || error
@@ -21,7 +21,7 @@ export const OrganizacionController = {
       const data = await OrganizacionService.getAll(includeInactivas);
       res.status(200).json(data);
     } catch (error: any) {
-      console.log(error);
+      //  console.log(error);
       res.status(500).json({
         message: error?.message || 'Error al obtener organizaciones',
         error: error?.message || error

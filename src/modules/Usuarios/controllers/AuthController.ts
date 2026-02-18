@@ -11,7 +11,7 @@ export class AuthController {
         usuario: usuarios
       });
     } catch (error) {
-      console.log(error);
+      //console.log(error);
       res.status(500).json({ mensaje: error.message });
     }
   };
@@ -23,7 +23,7 @@ export class AuthController {
         usuario: usuario
       });
     } catch (error) {
-      console.log(error);
+      // console.log(error);
       res.status(500).json({ mensaje: error.message });
     }
   };
@@ -72,7 +72,7 @@ export class AuthController {
       return;
     }
     const [, token] = bearer.split(' ');
-    console.log(token);
+   // console.log(token);
     if (!token) {
       res.status(403).json({ mensaje: 'Token no validsssso.' });
 

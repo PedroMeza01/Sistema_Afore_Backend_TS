@@ -53,7 +53,7 @@ export const ProcesoController = {
         data: result
       });
     } catch (error: any) {
-      console.log(error);
+      //  console.log(error);
       res.status(500).json({
         ok: false,
         message: error?.message ?? 'Error al finalizar proceso'
@@ -83,7 +83,7 @@ export const ProcesoController = {
 
       res.status(200).json({ ok: true, data: updated });
     } catch (err: any) {
-      console.log(err);
+      //  console.log(err);
       res.status(400).json({ ok: false, message: err?.message || 'Error al reemplazar archivo' });
     }
   },
@@ -188,7 +188,7 @@ export const ProcesoController = {
 
       res.status(201).json({ ok: true, data: archivo });
     } catch (error: any) {
-      console.log(error);
+      // console.log(error);
       res.status(400).json({
         ok: false,
         message: error?.message || 'Error subiendo archivo'

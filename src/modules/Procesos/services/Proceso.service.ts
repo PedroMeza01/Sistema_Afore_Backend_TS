@@ -74,9 +74,9 @@ export const ProcesoService = {
     const archivos = snapshot.archivos;
 
     try {
-      // await ProcesoRepository.deleteArchivosByProceso({ id_proceso, transaction: t });
-      //await ProcesoRepository.deleteProceso({ id_proceso, transaction: t });
-      //await ClientesRepository.borrarCliente({ id_cliente, transaction: t });
+      await ProcesoRepository.deleteArchivosByProceso({ id_proceso, transaction: t });
+      await ProcesoRepository.deleteProceso({ id_proceso, transaction: t });
+      await ClientesRepository.borrarCliente({ id_cliente, transaction: t });
 
       await t.commit();
     } catch (err) {
