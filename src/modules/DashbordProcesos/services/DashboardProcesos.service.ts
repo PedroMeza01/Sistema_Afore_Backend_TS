@@ -9,9 +9,9 @@ export class DashboardService {
     const now = new Date();
     const today = toDateOnly(now);
 
-    const plus30 = new Date(now);
-    plus30.setDate(plus30.getDate() + 30);
-    const todayPlus30 = toDateOnly(plus30);
+    const plus6Dias = new Date(now);
+    plus6Dias.setDate(plus6Dias.getDate() + 6);
+    const todayPlus30 = toDateOnly(plus6Dias);
 
     const [kpis, topFaltantes, calendario] = await Promise.all([
       DashboardProcesosRepository.getKPIs({ id_organizacion: input.id_organizacion, today, todayPlus30 }),

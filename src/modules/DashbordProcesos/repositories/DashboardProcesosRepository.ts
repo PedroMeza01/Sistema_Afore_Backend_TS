@@ -389,7 +389,7 @@ export const DashboardProcesosRepository = {
         FROM per_proceso
         WHERE fecha_cobro IS NOT NULL
           AND fecha_cobro >= :today AND fecha_cobro <= :todayPlus30
-
+/* 
         UNION ALL
 
         SELECT
@@ -401,6 +401,7 @@ export const DashboardProcesosRepository = {
           estatus_proceso
         FROM per_proceso
         WHERE docs_count < :reqLen
+        */
       ) x
       WHERE date IS NOT NULL
       ORDER BY date ASC;
