@@ -2,8 +2,8 @@ import { ICreateClienteDTO, IUpdateClienteDTO } from '../interface/Clientes.inte
 import { ClientesRepository } from '../repositories/ClientesRepository';
 
 export const ClientesServices = {
-  getAllPaginated: async ({ page, limit, search }) => {
-    return await ClientesRepository.getAllPaginated({ /*id_organizacion*/ page, limit, search });
+  getAllPaginated: async ({ id_organizacion, page, limit, search, id_asesor }) => {
+    return await ClientesRepository.getAllPaginated({ id_organizacion, page, limit, search, id_asesor });
   },
 
   getById: async (id_cliente: string) => {

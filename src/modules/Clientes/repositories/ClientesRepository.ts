@@ -18,13 +18,16 @@ export const ClientesRepository = {
 
     return deleted;
   },
-  getAllPaginated: async ({ /*id_organizacion, */ page, limit, search }) => {
+  getAllPaginated: async ({ id_organizacion, page, limit, search, id_asesor }) => {
     const offset = (page - 1) * limit;
 
     const where: any = {
-      /*id_organizacion**/
+      id_organizacion
     };
 
+    if (id_asesor && String(id_asesor).trim().length) {
+      where.id_asesor = id_asesor;
+    }
     if (search && search.trim().length) {
       const q = search.trim();
 

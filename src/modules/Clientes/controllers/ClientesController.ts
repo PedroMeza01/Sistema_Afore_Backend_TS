@@ -10,19 +10,19 @@ const getOrg = (req: AuthedRequest) => {
 export class ClientesController {
   static getAll = async (req: AuthedRequest, res: Response) => {
     try {
-      //   const id_organizacion = req.user?.id_organizacion;
-      // if (!id_organizacion) {
-      //    return res.status(401).json({ mensaje: 'Token inválido: sin organización' });
-      //    }
+      const id_organizacion = getOrg(req);
+      const id_asesor = String(req.query.id_asesor ?? '');
 
       const page = Math.max(parseInt(String(req.query.page ?? '1'), 10) || 1, 1);
       const limit = Math.min(Math.max(parseInt(String(req.query.limit ?? '10'), 10) || 10, 1), 100);
       const search = String(req.query.search ?? '').trim();
 
       const result = await ClientesServices.getAllPaginated({
+        id_organizacion,
         page,
         limit,
-        search: search.length ? search : undefined
+        search: search.length ? search : undefined,
+        id_asesor
       });
       res.status(200).json(result);
     } catch (error: any) {
