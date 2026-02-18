@@ -2,7 +2,7 @@ import Clientes from '../model/Clientes';
 import Organizacion from '../../Organizacion/model/Organizacion';
 import Asesor from '../../Asesores/model/Asesor';
 import { ICreateClienteDTO, IUpdateClienteDTO } from '../interface/Clientes.interface';
-import { Op, Transaction } from 'sequelize';
+import { Op, Transaction, where } from 'sequelize';
 export const ClientesRepository = {
   borrarCliente: async (input: { id_cliente: string; transaction: Transaction }) => {
     const { id_cliente, transaction } = input;
@@ -17,6 +17,27 @@ export const ClientesRepository = {
     }
 
     return deleted;
+  },
+  getByNSSoCURP: async (nss?: string, curp?: string) => {
+    const conditions = [];
+
+    if (nss?.trim()) {
+      conditions.push({ nss_cliente: nss.trim() });
+    }
+
+    if (curp?.trim()) {
+      conditions.push({ curp_cliente: curp.trim() });
+    }
+
+    if (!conditions.length) return false;
+
+    const cliente = await Clientes.findOne({
+      where: {
+        [Op.or]: conditions
+      }
+    });
+
+    return !!cliente;
   },
   getAllPaginated: async ({ id_organizacion, page, limit, search, id_asesor }) => {
     const offset = (page - 1) * limit;

@@ -22,15 +22,15 @@ export const ClientesServices = {
 
     required(data.nombre_cliente, 'nombre_cliente');
     required(data.apellido_pat_cliente, 'apellido_pat_cliente');
-    required(data.apellido_mat_cliente, 'apellido_mat_cliente');
 
     required(data.curp_cliente, 'curp_cliente');
     required(data.nss_cliente, 'nss_cliente');
-    required(data.rfc_cliente, 'rfc_cliente');
 
-    required(data.telefono_cliente, 'telefono_cliente');
-    required(data.email_cliente, 'email_cliente');
-
+    const cliente = await ClientesRepository.getByNSSoCURP(data.nss_cliente, data.curp_cliente);
+    // console.log(cliente);
+    if (cliente) {
+      throw new Error('El cliente ya existe');
+    }
     return await ClientesRepository.create(data);
   },
 

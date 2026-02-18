@@ -13,6 +13,7 @@ export class DashboardController {
       if (!id_organizacion) res.status(400).json({ message: 'id_organizacion requerido' });
 
       const data = await DashboardService.getDashboard({ id_organizacion });
+      console.log(data);
       res.json(data);
     } catch (error) {
       console.log(error);
