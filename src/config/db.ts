@@ -1,4 +1,4 @@
-import { Sequelize } from 'sequelize-typescript';
+/*import { Sequelize } from 'sequelize-typescript';
 import dotenv from 'dotenv';
 import path from 'path';
 
@@ -19,8 +19,8 @@ export const dbLocal = new Sequelize(process.env.DATABASE_URL!, {
   ],
   logging: false
 });
+*/
 /*PRUEBA */
-/*
 
 import { Sequelize } from 'sequelize-typescript';
 import dotenv from 'dotenv';
@@ -46,4 +46,3 @@ export const dbLocal = new Sequelize({
   ],
   logging: false
 });
-*/
