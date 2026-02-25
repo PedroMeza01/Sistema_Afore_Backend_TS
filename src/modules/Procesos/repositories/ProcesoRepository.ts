@@ -1,5 +1,5 @@
 // src/modules/Proceso/repository/ProcesoRepository.ts
-import { Transaction } from 'sequelize';
+import { Op, Transaction } from 'sequelize';
 import { ICreateProcesoDTO, IUpdateProcesoDTO } from '../interface/Proceso.interface';
 import Proceso from '../model/Proceso';
 import ProcesoArchivo from '../model/ProcesoArchivo';
@@ -82,7 +82,17 @@ type DeleteProcesoAndArchivosInput = {
 
 export const ProcesoRepository = {
   // ===== Proceso =====
+  getEntreFechas: async (d1: Date, d2: Date, id_organizacion: string) => {
+    const rows = await Proceso.findAll({
+      where: {
+        id_organizacion,
+        fecha_firma: { [Op.between]: [d1, d2] }
+      },
+      order: [['fecha_firma', 'ASC']]
+    });
 
+    return rows;
+  },
   create: async (data: ICreateProcesoDTO, id_organizacion: string) => {
     return await Proceso.create({ ...data, id_organizacion });
   },

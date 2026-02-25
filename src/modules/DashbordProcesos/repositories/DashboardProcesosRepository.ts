@@ -429,19 +429,27 @@ export const DashboardProcesosRepository = {
     }));
   }
 };
-
 function buildFilterSql(f?: string) {
   const key = (f ?? '').toString().trim();
-
   if (!key) return '';
 
-  // Nota: aquí ya estamos dentro del CTE base, así que podemos filtrar por docs_count, etc.
+  // OJO: esto corre en el SELECT final (sobre el CTE "base"),
+  // así que solo puedes usar columnas que estén en "base"
   switch (key) {
     case 'docs_incompletos':
       return `AND docs_count < :reqLen`;
 
     case 'tramite_sin_resultado':
-      return `AND tramite_solicitado = true AND (resultado_tramite IS NULL OR resultado_tramite = '')`;
+      // Si en tu sistema "sin resultado" incluye cuando está en SOLICITADO,
+      // esto es lo correcto.
+      return `
+        AND tramite_solicitado = true
+        AND (
+          resultado_tramite IS NULL
+          OR resultado_tramite = ''
+          OR resultado_tramite = 'SOLICITADO'
+        )
+      `;
 
     case 'citas_vencidas':
       return `AND cita_afore IS NOT NULL AND cita_afore < :today`;
@@ -453,20 +461,31 @@ function buildFilterSql(f?: string) {
       return `AND tramite_solicitado = true AND (expediente_actualizado = false OR app_vinculada = false)`;
 
     case 'criticos':
-      // tu definición: docs incompletos + citas vencidas + 46 vencidos + tramite sin resultado + inconsistencia
+      // docs incompletos + citas vencidas + 46 vencidos + tramite sin resultado + inconsistencia
       return `
         AND (
           docs_count < :reqLen
           OR (cita_afore IS NOT NULL AND cita_afore < :today)
           OR (fecha_46_dias IS NOT NULL AND fecha_46_dias < :today)
-          OR (tramite_solicitado = true AND (resultado_tramite IS NULL OR resultado_tramite = ''))
+          OR (
+            tramite_solicitado = true
+            AND (
+              resultado_tramite IS NULL
+              OR resultado_tramite = ''
+              OR resultado_tramite = 'SOLICITADO'
+            )
+          )
           OR (tramite_solicitado = true AND (expediente_actualizado = false OR app_vinculada = false))
         )
       `;
 
     case 'docs':
-      // si quieres mostrar solo los que tienen tema de docs, te dejo como incompletos (puedes ajustar)
+      // lo dejas como "incompletos" (ajusta si luego quieres "con docs" vs "sin docs")
       return `AND docs_count < :reqLen`;
+
+    case 'solicitados':
+      // ✅ SOLO los que tienen tramite_solicitado en true
+      return `AND tramite_solicitado = true`;
 
     default:
       return '';

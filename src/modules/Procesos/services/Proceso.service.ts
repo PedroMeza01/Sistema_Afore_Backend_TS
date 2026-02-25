@@ -49,6 +49,9 @@ export const ProcesoService = {
     });
   },
 
+  getEntreFechas: async (d1: Date, d2: Date, id_organizacion: string) => {
+    return await ProcesoRepository.getEntreFechas(d1, d2, id_organizacion);
+  },
   finalizarProcesoEnviarCorreoYBorrarTodo: async (input: FinalizarInput) => {
     const { id_cliente, id_proceso, id_organizacion } = input;
 

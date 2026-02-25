@@ -33,6 +33,8 @@ router.post('/', authMiddleware, ProcesoController.create);
 router.get('/', authMiddleware, ProcesoController.list);
 
 // ojo: estas rutas “comodín” VAN AL FINAL
+router.get('/filtroFecha', authMiddleware, ProcesoController.getEntreFechasFirma);
+
 router.get('/:id_proceso', authMiddleware, ProcesoController.getById);
 router.patch('/:id_proceso', authMiddleware, ProcesoController.update);
 
