@@ -5,15 +5,21 @@ import { dbLocal } from '../../../config/db';
 import { ListInput } from '../interface/DashboardResponse';
 
 const REQUIRED_DOCS = ['INE_FRENTE', 'INE_POSTERIOR', 'ESTADO_CUENTA', 'COMPROBANTE_DOM', 'CONTRATO_PAGARE'];
+const normalizeDate = (v?: string) => {
+  const s = (v ?? '').trim();
+  return s ? s : null;
+};
 
 export const DashboardProcesosRepository = {
   listPaginated: async (input: ListInput) => {
     const { id_organizacion, page, limit, search, f, today } = input;
 
+    // Normaliza para evitar ''::date
+    const desde = normalizeDate(input.desde);
+    const hasta = normalizeDate(input.hasta);
+
     const offset = (page - 1) * limit;
 
-    // filtros por "f"
-    // los aplicamos sobre un CTE "base" para poder filtrar por docs_count, etc.
     const whereSearch = search?.trim()
       ? `
         AND (
@@ -29,7 +35,14 @@ export const DashboardProcesosRepository = {
 
     const filterSql = buildFilterSql(f);
 
-    // COUNT total (para paginación)
+    // ✅ Filtro rango por FECHA FIRMA (TIMESTAMP): incluye todo el día "hasta"
+    // Cambia p.fecha_firma_proceso por el nombre real de tu columna
+    const whereFirma = `
+      AND (:desde IS NULL OR p.fecha_firma >= :desde::date)
+      AND (:hasta IS NULL OR p.fecha_firma < (:hasta::date + INTERVAL '1 day'))
+    `;
+
+    // COUNT total
     const countRows = await dbLocal.query<{ total: number }>(
       `
       WITH base AS (
@@ -54,6 +67,7 @@ export const DashboardProcesosRepository = {
         JOIN cliente c ON c.id_cliente = p.id_cliente
         LEFT JOIN proceso_archivo pa ON pa.id_proceso = p.id_proceso
         WHERE p.id_organizacion = :idOrg
+        ${whereFirma}
         ${whereSearch}
         GROUP BY
           p.id_proceso, p.id_cliente, p.estatus_proceso,
@@ -74,7 +88,9 @@ export const DashboardProcesosRepository = {
           requiredDocs: REQUIRED_DOCS,
           searchLike: `%${(search ?? '').trim()}%`,
           reqLen: REQUIRED_DOCS.length,
-          today
+          today,
+          desde,
+          hasta
         }
       }
     );
@@ -107,6 +123,7 @@ export const DashboardProcesosRepository = {
         JOIN cliente c ON c.id_cliente = p.id_cliente
         LEFT JOIN proceso_archivo pa ON pa.id_proceso = p.id_proceso
         WHERE p.id_organizacion = :idOrg
+        ${whereFirma}
         ${whereSearch}
         GROUP BY
           p.id_proceso, p.id_cliente, p.estatus_proceso,
@@ -146,6 +163,8 @@ export const DashboardProcesosRepository = {
           searchLike: `%${(search ?? '').trim()}%`,
           reqLen: REQUIRED_DOCS.length,
           today,
+          desde,
+          hasta,
           limit,
           offset
         }
@@ -160,7 +179,9 @@ export const DashboardProcesosRepository = {
         totalItems,
         totalPages,
         search: search ?? '',
-        f: f ?? ''
+        f: f ?? '',
+        desde: desde ?? '',
+        hasta: hasta ?? ''
       }
     };
   },

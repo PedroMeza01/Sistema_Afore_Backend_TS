@@ -36,7 +36,15 @@ type FinalizarInput = {
   id_organizacion: string;
 };
 export const ProcesoService = {
-  list: async (input: { id_organizacion: string; page: number; limit: number; search?: string; f?: string }) => {
+  list: async (input: {
+    id_organizacion: string;
+    page: number;
+    limit: number;
+    search?: string;
+    f?: string;
+    desde?: string;
+    hasta?: string;
+  }) => {
     const today = new Date().toISOString().slice(0, 10);
 
     return await DashboardProcesosRepository.listPaginated({
@@ -45,13 +53,12 @@ export const ProcesoService = {
       limit: input.limit,
       search: input.search,
       f: input.f,
-      today
+      today,
+      desde: input.desde,
+      hasta: input.hasta
     });
   },
 
-  getEntreFechas: async (d1: Date, d2: Date, id_organizacion: string) => {
-    return await ProcesoRepository.getEntreFechas(d1, d2, id_organizacion);
-  },
   finalizarProcesoEnviarCorreoYBorrarTodo: async (input: FinalizarInput) => {
     const { id_cliente, id_proceso, id_organizacion } = input;
 
@@ -77,6 +84,7 @@ export const ProcesoService = {
     const archivos = snapshot.archivos;
 
     try {
+      await ProcesoRepository.cambiarStatusFinalizar(id_proceso);
       //   await ProcesoRepository.deleteArchivosByProceso({ id_proceso, transaction: t });
       // await ProcesoRepository.deleteProceso({ id_proceso, transaction: t });
       //await ClientesRepository.borrarCliente({ id_cliente, transaction: t });

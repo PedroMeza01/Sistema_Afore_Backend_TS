@@ -22,41 +22,14 @@ export const ProcesoController = {
       const limit = Math.min(Math.max(Number(req.query.limit || 10), 1), 100);
       const search = (req.query.search || '').toString();
       const f = (req.query.f || '').toString();
-
-      const data = await ProcesoService.list({ id_organizacion, page, limit, search, f });
-      res.json(data);
-    } catch (err: any) {
-      res.status(500).json({ message: err?.message || 'Error en list procesos' });
-    }
-  },
-  getEntreFechasFirma: async (req: AuthedRequest, res: Response) => {
-    try {
       const desde = String(req.query.desde ?? '');
       const hasta = String(req.query.hasta ?? '');
 
-      if (!desde || !hasta) {
-        res.status(400).json({ message: 'Faltan parámetros: desde y hasta (YYYY-MM-DD).' });
-      }
-      if (!isISODate(desde) || !isISODate(hasta)) {
-        res.status(400).json({ message: 'Formato inválido. Usa YYYY-MM-DD.' });
-      }
-
-      // si vienen invertidas, corrige (o rechaza si prefieres)
-      const d1 = toStartUTC(desde);
-      const d2 = toEndUTC(hasta);
-
-      const id_organizacion = getOrg(req);
-      if (!id_organizacion) {
-        res.status(401).json({ message: 'No autorizado.' });
-      }
-      if (d1.getTime() > d2.getTime()) {
-        res.status(400).json({ message: '"desde" no puede ser mayor que "hasta".' });
-      }
-
-      const procesosFechas = await ProcesoService.getEntreFechas(d1, d2, id_organizacion);
-      res.status(200).json(procesosFechas);
-    } catch (error) {
-      console.log(error);
+      // console.log(desde, 'hasta', hasta);
+      const data = await ProcesoService.list({ id_organizacion, page, limit, search, f, desde, hasta });
+      res.json(data);
+    } catch (err: any) {
+      res.status(500).json({ message: err?.message || 'Error en list procesos' });
     }
   },
 

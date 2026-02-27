@@ -43,4 +43,6 @@ export type ListInput = {
   search?: string;
   f?: string;
   today: string; // YYYY-MM-DD
+  desde?: string;
+  hasta?: string;
 };

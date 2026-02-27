@@ -82,41 +82,28 @@ type DeleteProcesoAndArchivosInput = {
 
 export const ProcesoRepository = {
   // ===== Proceso =====
-  getEntreFechas: async (d1: Date, d2: Date, id_organizacion: string) => {
-    const rows = await Proceso.findAll({
-      where: {
-        id_organizacion,
-        fecha_firma: { [Op.between]: [d1, d2] }
-      },
-      order: [['fecha_firma', 'ASC']]
-    });
-
-    return rows;
+  cambiarStatusFinalizar: async (id_proceso: string) => {
+    return await Proceso.update({ estatus_proceso: 'Finalizar' }, { where: { id_proceso } });
   },
   create: async (data: ICreateProcesoDTO, id_organizacion: string) => {
     return await Proceso.create({ ...data, id_organizacion });
   },
-
   findById: async (id_proceso: string) => {
     return await Proceso.findByPk(id_proceso, { include: [ProcesoArchivo] });
   },
-
   update: async (id_proceso: string, data: IUpdateProcesoDTO) => {
     const row = await Proceso.findByPk(id_proceso);
     if (!row) return null;
     await row.update({ ...data });
     return row;
   },
-
   listByCliente: async (id_cliente: string) => {
     return await Proceso.findAll({
       where: { id_cliente },
       order: [['createdAt', 'DESC']]
     });
   },
-
   // ===== Archivos =====
-
   findArchivoById: async (input: FindArchivoByIdInput) => {
     const where: any = { id_proceso_archivo: input.id_proceso_archivo };
     if (input.id_organizacion) where.id_organizacion = input.id_organizacion;
