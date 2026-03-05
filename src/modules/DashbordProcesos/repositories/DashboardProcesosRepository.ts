@@ -477,6 +477,13 @@ function buildFilterSql(f?: string) {
 
     case '46_vencidos':
       return `AND fecha_46_dias IS NOT NULL AND fecha_46_dias < :today`;
+    
+    case 'finalizados':
+      return `AND estatus_proceso = 'FINALIZADO'`;
+
+    case 'bloqueados':
+      return `AND estatus_proceso = 'BLOQUEADO'`;
+      
 
     case 'inconsistencia_tramite':
       return `AND tramite_solicitado = true AND (expediente_actualizado = false OR app_vinculada = false)`;
