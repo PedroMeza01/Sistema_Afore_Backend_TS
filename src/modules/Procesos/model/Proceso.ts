@@ -142,6 +142,10 @@ export default class Proceso extends Model {
   @Column(DataType.TEXT)
   declare motivo_estatus: string | null;
 
+  //! NUEVO CAMPO
+
+  @Column(DataType.DATEONLY)
+  declare fecha_tramite: Date | null;
   // ===== ARCHIVOS =====
   @HasMany(() => ProcesoArchivo, {
     foreignKey: 'id_proceso',

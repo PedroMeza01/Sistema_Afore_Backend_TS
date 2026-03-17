@@ -96,7 +96,7 @@ export const ProcesoController = {
   create: async (req: AuthedRequest, res: Response) => {
     try {
       const id_organizacion = getOrg(req);
-
+      //console.log(req);
       if (!id_organizacion) {
         res.status(401).json({ ok: false, message: 'No autorizado: falta id_organizacion' });
       }

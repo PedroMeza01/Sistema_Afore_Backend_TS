@@ -243,6 +243,32 @@ export const DashboardProcesosRepository = {
             `SUM(CASE WHEN tramite_solicitado = true AND (expediente_actualizado = false OR app_vinculada = false) THEN 1 ELSE 0 END)`
           ),
           'inconsistencia_tramite'
+        ],
+        [
+          Sequelize.literal(`
+             SUM(
+                CASE
+             WHEN fecha_firma IS NOT NULL
+             AND fecha_firma::date <= CURRENT_DATE - INTERVAL '10 days'
+             THEN 1
+          ELSE 0
+      END
+    )
+  `),
+          'firma_mas_10_dias'
+        ],
+        [
+          Sequelize.literal(`
+             SUM(
+                CASE
+             WHEN fecha_tramite IS NOT NULL
+             AND fecha_tramite::date <= CURRENT_DATE - INTERVAL '5 days'
+             THEN 1
+          ELSE 0
+      END
+    )
+  `),
+          'tramite_mas_5_dias'
         ]
       ],
       raw: true
@@ -297,7 +323,9 @@ export const DashboardProcesosRepository = {
       citas_vencidas: Number(s.citas_vencidas ?? 0),
       dias46_proximos_7: Number(s.dias46_proximos_7 ?? 0),
       dias46_vencidos: Number(s.dias46_vencidos ?? 0),
-      inconsistencia_tramite: Number(s.inconsistencia_tramite ?? 0)
+      firma_mas_10_dias: Number(s.firma_mas_10_dias ?? 0),
+      inconsistencia_tramite: Number(s.inconsistencia_tramite ?? 0),
+      tramite_mas_5_dias: Number(s.tramite_mas_5_dias ?? 0)
     };
   },
 
@@ -477,13 +505,12 @@ function buildFilterSql(f?: string) {
 
     case '46_vencidos':
       return `AND fecha_46_dias IS NOT NULL AND fecha_46_dias < :today`;
-    
+
     case 'finalizados':
       return `AND estatus_proceso = 'FINALIZADO'`;
 
     case 'bloqueados':
       return `AND estatus_proceso = 'BLOQUEADO'`;
-      
 
     case 'inconsistencia_tramite':
       return `AND tramite_solicitado = true AND (expediente_actualizado = false OR app_vinculada = false)`;

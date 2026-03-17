@@ -24,6 +24,7 @@ export interface ICreateProcesoDTO {
   tramite_solicitado?: boolean;
   resultado_tramite?: string | null;
   observacion_tramite?: string | null;
+  fecha_tramite?: string | null;
 
   listo_para_cobro?: boolean;
   fecha_cobro?: string | null;
