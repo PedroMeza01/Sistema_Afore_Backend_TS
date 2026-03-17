@@ -246,12 +246,13 @@ export const DashboardProcesosRepository = {
         ],
         [
           Sequelize.literal(`
-             SUM(
-                CASE
-             WHEN fecha_firma IS NOT NULL
-             AND fecha_firma::date <= CURRENT_DATE - INTERVAL '10 days'
-             THEN 1
-          ELSE 0
+    SUM(
+      CASE
+        WHEN fecha_firma IS NOT NULL
+        AND (fecha_firma <=  CURRENT_DATE - INTERVAL '10 days')
+        AND fecha_baja_imss IS NULL
+        THEN 1
+        ELSE 0
       END
     )
   `),
