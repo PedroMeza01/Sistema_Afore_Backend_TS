@@ -6,6 +6,7 @@ import aforesRoutes from '../modules/Afores/routes/aforeRouter';
 import asesoresRoutes from '../modules/Asesores/routes/asesorRouter';
 import { authMiddleware } from '../middleware/auth';
 import routerProcesos from '../modules/Procesos/routes/procesoRouter';
+import balanceRouter from '../modules/Balance/routes/balanceRouter';
 import dashboardRoute from '../modules/DashbordProcesos/routes/dashboardProceso.route';
 const router = Router();
 
@@ -16,4 +17,5 @@ router.use('/afores', authMiddleware, aforesRoutes);
 router.use('/asesores', authMiddleware, asesoresRoutes);
 router.use('/procesos', routerProcesos);
 router.use('/dashboard', dashboardRoute);
+router.use('/balance', balanceRouter);
 export default router;

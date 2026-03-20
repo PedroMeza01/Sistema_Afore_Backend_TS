@@ -57,6 +57,9 @@ export const DashboardProcesosRepository = {
           p.cita_afore,
           p.fecha_46_dias,
           p.fecha_cobro,
+          p.fecha_firma,
+          p.fecha_baja_imss,
+          p.fecha_tramite,
           (c.nombre_cliente || ' ' || c.apellido_pat_cliente || ' ' || c.apellido_mat_cliente) AS cliente_nombre,
           c.curp_cliente,
           c.telefono_cliente,
@@ -73,6 +76,7 @@ export const DashboardProcesosRepository = {
           p.id_proceso, p.id_cliente, p.estatus_proceso,
           p.tramite_solicitado, p.resultado_tramite, p.expediente_actualizado, p.app_vinculada,
           p.cita_afore, p.fecha_46_dias, p.fecha_cobro,
+          p.fecha_firma, p.fecha_baja_imss, p.fecha_tramite,
           cliente_nombre, c.curp_cliente, c.telefono_cliente
       )
       SELECT COUNT(*)::int AS total
@@ -113,6 +117,9 @@ export const DashboardProcesosRepository = {
           p.cita_afore,
           p.fecha_46_dias,
           p.fecha_cobro,
+          p.fecha_firma,
+          p.fecha_baja_imss,
+          p.fecha_tramite,
           (c.nombre_cliente || ' ' || c.apellido_pat_cliente || ' ' || c.apellido_mat_cliente) AS cliente_nombre,
           c.curp_cliente,
           c.telefono_cliente,
@@ -129,6 +136,7 @@ export const DashboardProcesosRepository = {
           p.id_proceso, p.id_cliente, p.estatus_proceso,
           p.tramite_solicitado, p.resultado_tramite, p.expediente_actualizado, p.app_vinculada,
           p.cita_afore, p.fecha_46_dias, p.fecha_cobro,
+          p.fecha_firma, p.fecha_baja_imss, p.fecha_tramite,
           cliente_nombre, c.curp_cliente, c.telefono_cliente
       )
       SELECT
@@ -140,6 +148,9 @@ export const DashboardProcesosRepository = {
         cita_afore,
         fecha_46_dias,
         fecha_cobro,
+        fecha_firma,
+        fecha_baja_imss,
+        fecha_tramite,
         cliente_nombre,
         curp_cliente,
         telefono_cliente,
@@ -540,8 +551,23 @@ function buildFilterSql(f?: string) {
       return `AND docs_count < :reqLen`;
 
     case 'solicitados':
-      // ✅ SOLO los que tienen tramite_solicitado en true
       return `AND tramite_solicitado = true`;
+
+    case 'firma_mas_10_dias':
+      // Firma registrada, sin baja IMSS, y han pasado más de 10 días desde la firma
+      return `
+        AND fecha_firma IS NOT NULL
+        AND fecha_baja_imss IS NULL
+        AND fecha_firma <= :today::date - INTERVAL '10 days'
+      `;
+
+    case 'tramite_mas_5_dias':
+      // Trámite iniciado, sin cobro registrado, y han pasado más de 5 días
+      return `
+        AND fecha_tramite IS NOT NULL
+        AND fecha_cobro IS NULL
+        AND fecha_tramite::date <= :today::date - INTERVAL '5 days'
+      `;
 
     default:
       return '';

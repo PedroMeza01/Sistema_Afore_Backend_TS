@@ -4,6 +4,7 @@ import jwt from "jsonwebtoken";
 export interface JwtPayloadCustom {
     id_user: string;
     username: string;
+    id_organizacion?: string;
     iat: number;
     exp: number;
 }

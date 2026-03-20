@@ -136,6 +136,13 @@ export default class Proceso extends Model {
   @Column(DataType.DECIMAL(12, 2))
   declare bono_asesora: string | null;
 
+  // Bonos extra independientes del porcentaje de comisión
+  @Column(DataType.DECIMAL(12, 2))
+  declare bono_firma: string | null;       // bono por firma (ej. +700)
+
+  @Column(DataType.DECIMAL(12, 2))
+  declare bono_encuentras: string | null;  // bono por encuesta (ej. +200)
+
   @Column(DataType.STRING(20))
   declare estatus_proceso: string | null;
 
